@@ -258,6 +258,11 @@ textarea.field{resize:vertical;line-height:1.5}
 .credit .sep{color:var(--line2)}
 @media (max-width:420px){.credit .sep{display:none}.credit{flex-direction:column;align-items:center;gap:4px}}
 
+/* google login */
+.gbtn{display:inline-flex;align-items:center;gap:10px;border:1px solid var(--line2);background:#fff;border-radius:999px;padding:10px 18px;font-size:14px;font-weight:600;color:#3c4043;margin-top:6px}
+.gmark{width:22px;height:22px;border-radius:50%;display:grid;place-items:center;font-weight:800;font-size:14px;color:#fff;background:conic-gradient(#ea4335 0 25%,#fbbc05 0 50%,#34a853 0 75%,#4285f4 0)}
+.btn-col{display:flex;flex-direction:column;gap:8px}
+
 /* centered popup (about) */
 .sheet.modal{top:50%;left:50%;right:auto;bottom:auto;height:auto;width:min(440px,calc(100vw - 40px));max-height:74vh;
   border:1px solid var(--line);border-radius:22px;box-shadow:0 20px 60px rgba(40,30,20,.18);
@@ -346,6 +351,8 @@ html[data-theme="glass"] .credit{border-top-color:rgba(255,255,255,.6)}
     <span>만든 사람 · <a href="https://blog.naver.com/puretnet" target="_blank" rel="noopener">겨루</a></span>
     <span class="sep">|</span>
     <span>문의 · <a href="mailto:puretnet@naver.com">puretnet@naver.com</a></span>
+    <span class="sep">|</span>
+    <span><a href="privacy.html" target="_blank" rel="noopener">개인정보처리방침</a></span>
   </footer>
 </div>
 <div class="backdrop" id="backdrop"></div>
@@ -353,6 +360,7 @@ html[data-theme="glass"] .credit{border-top-color:rgba(255,255,255,.6)}
 <div class="dialog-bg" id="dialogBg"><div class="dialog" id="dialog"></div></div>
 <div class="toast" id="toast"></div>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
 (() => {
 /* ---------- constants ---------- */
@@ -513,10 +521,134 @@ function save(){
   clearTimeout(saveTimer);
   saveTimer = setTimeout(() => {
     if (Store.save(state)){
-      const s = $('#saved'); s.classList.add('show');
+      const s = $('#saved'); s.textContent = '저장됨'; s.classList.add('show');
       clearTimeout(s._t); s._t = setTimeout(() => s.classList.remove('show'), 1200);
     }
+    Cloud.queuePush();
   }, 300);
+}
+
+/* ---------- cloud sync (Supabase + Google login) ---------- */
+const SUPABASE_URL = 'https://idjymuakmnvpkhheybum.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_mGweuspUerM0WsLBHoGkZw_5rk1bY-5';
+const SYNC_META_KEY = 'mandalart-note-sync';
+const Cloud = {
+  client:null, user:null, status:'off', lastSync:null, pushTimer:null, busy:false,
+  available(){ return !!(window.supabase && window.supabase.createClient) && /github\.io$|localhost|127\.0\.0\.1/.test(location.hostname); },
+  meta(){ try { return JSON.parse(localStorage.getItem(SYNC_META_KEY)) || {}; } catch(e){ return {}; } },
+  setMeta(m){ try { localStorage.setItem(SYNC_META_KEY, JSON.stringify(m)); } catch(e){} },
+  async init(){
+    if (!this.available()) return;
+    this.client = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {auth:{persistSession:true, autoRefreshToken:true, detectSessionInUrl:true}});
+    this.client.auth.onAuthStateChange((ev, session) => {
+      const u = session ? session.user : null;
+      const changed = (u && u.id) !== (this.user && this.user.id);
+      this.user = u;
+      if (u && changed) this.firstSync();
+      if (!u){ this.status = 'off'; refreshSyncUI(); }
+    });
+    const { data } = await this.client.auth.getSession();
+    if (data && data.session && !this.user){ this.user = data.session.user; this.firstSync(); }
+    document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') this.pull(); });
+  },
+  async login(){
+    if (!this.client){ toast('로그인은 puretnet.github.io 사이트에서만 돼요'); return; }
+    const redirectTo = location.origin + location.pathname;
+    const { error } = await this.client.auth.signInWithOAuth({provider:'google', options:{redirectTo}});
+    if (error) toast('로그인을 시작하지 못했어요');
+  },
+  async logout(){
+    if (!this.client) return;
+    await this.client.auth.signOut();
+    this.user = null; this.status = 'off'; this.setMeta({});
+    refreshSyncUI(); toast('로그아웃했어요 · 이 기기의 내용은 그대로 남아 있어요');
+  },
+  async fetchRemote(){
+    const { data, error } = await this.client.from('mandalart_data').select('data, updated_at').eq('user_id', this.user.id).maybeSingle();
+    if (error) throw error;
+    return data;
+  },
+  async firstSync(){
+    this.status = 'syncing'; refreshSyncUI();
+    try {
+      const remote = await this.fetchRemote();
+      const meta = this.meta();
+      const localHas = Object.keys(state.years).some(yearHasData);
+      if (!remote){ await this.push(true); }
+      else if (meta.uid === this.user.id || !localHas){ this.applyRemote(remote); }
+      else {
+        // this device has its own notes and the account has notes too: let the person choose
+        choiceDialog('이 기기에 쓴 내용과 구글 계정에 저장된 내용이 둘 다 있어요.\n어느 쪽을 쓸까요?', [
+          {label:'계정 내용 불러오기', primary:true, fn:() => this.applyRemote(remote)},
+          {label:'이 기기 내용으로 덮어쓰기', fn:() => this.push(true)}
+        ]);
+        this.status = 'on'; refreshSyncUI(); return;
+      }
+      this.status = 'on';
+    } catch(e){ this.status = 'error'; }
+    refreshSyncUI();
+  },
+  applyRemote(remote){
+    state = normalize(remote.data); Store.save(state); applyFont(); render();
+    this.lastSync = new Date(remote.updated_at);
+    this.setMeta({uid:this.user.id, at:remote.updated_at});
+    this.status = 'on'; refreshSyncUI();
+  },
+  queuePush(){
+    if (!this.user || this.status === 'syncing') return;
+    clearTimeout(this.pushTimer); this.pending = true;
+    this.pushTimer = setTimeout(() => this.push(), 1200);
+  },
+  async push(force){
+    this.pending = false;
+    if (!this.user) return;
+    try {
+      const at = new Date().toISOString();
+      const { error } = await this.client.from('mandalart_data').upsert({user_id:this.user.id, data:state, updated_at:at});
+      if (error) throw error;
+      this.lastSync = new Date(at); this.setMeta({uid:this.user.id, at});
+      this.status = 'on';
+      const s = $('#saved'); s.textContent = '☁️ 동기화됨'; s.classList.add('show');
+      clearTimeout(s._t); s._t = setTimeout(() => s.classList.remove('show'), 1500);
+    } catch(e){ this.status = 'error'; }
+    refreshSyncUI();
+  },
+  async pull(){
+    if (!this.user || this.status === 'syncing' || this.pending) return;
+    try {
+      const remote = await this.fetchRemote();
+      const meta = this.meta();
+      if (remote && (!meta.at || new Date(remote.updated_at) > new Date(meta.at))){
+        if (ui.sheet && ui.sheet.type === 'edit') closeSheet();
+        this.applyRemote(remote);
+        toast('다른 기기에서 바뀐 내용을 불러왔어요');
+      }
+    } catch(e){}
+  }
+};
+function refreshSyncUI(){ if (ui.sheet && ui.sheet.type === 'settings') openSheet({type:'settings'}); }
+function renderSyncBox(){
+  if (!Cloud.available()) return [h('p', {class:'note'}, Store.ok
+    ? '지금은 이 기기(브라우저)에 자동 저장돼요.\n구글 로그인 동기화는 puretnet.github.io 사이트에서 쓸 수 있어요.'
+    : '⚠️ 이 화면에서는 기기 저장이 막혀 있어서, 창을 닫으면 내용이 사라질 수 있어요.\n아래 백업을 꼭 해 주세요.')];
+  if (!Cloud.user) return [
+    h('p', {class:'note'}, '지금은 이 기기(브라우저)에 자동 저장돼요.\n구글로 로그인하면 PC와 폰에서 같은 내용을 볼 수 있어요.'),
+    h('button', {type:'button', class:'gbtn', onclick:() => Cloud.login()},
+      h('span', {class:'gmark'}, 'G'), '구글로 로그인')];
+  const t = Cloud.lastSync ? Cloud.lastSync.toLocaleTimeString('ko-KR', {hour:'2-digit', minute:'2-digit'}) : '';
+  const msg = Cloud.status === 'syncing' ? '☁️ 동기화하는 중이에요…'
+    : Cloud.status === 'error' ? '⚠️ 동기화에 실패했어요. 인터넷 연결을 확인해 주세요.\n이 기기에는 그대로 저장돼 있어요.'
+    : '☁️ ' + (Cloud.user.email || '구글 계정') + ' 계정으로 동기화 중이에요.' + (t ? '\n마지막 동기화 ' + t : '');
+  return [h('p', {class:'note'}, msg),
+    h('div', {class:'btn-row'},
+      h('button', {type:'button', class:'ghost', onclick:() => Cloud.pull().then(() => toast('최신 내용을 확인했어요'))}, '🔄 지금 동기화'),
+      h('button', {type:'button', class:'ghost', onclick:() => confirmDialog('로그아웃할까요?\n이 기기의 내용은 그대로 남아 있어요.', () => Cloud.logout())}, '로그아웃'))];
+}
+function choiceDialog(msg, choices){
+  const d = $('#dialog'); d.innerHTML = '';
+  d.append(h('p', {style:'white-space:pre-line'}, msg), h('div', {class:'btn-col'},
+    choices.map(c => h('button', {type:'button', class:c.primary ? 'primary' : 'ghost', onclick:() => { $('#dialogBg').classList.remove('show'); c.fn(); }}, c.label))));
+  $('#dialogBg').classList.add('show');
 }
 
 /* ---------- targets & links ---------- */
@@ -731,7 +863,7 @@ function renderAbout(){
         h('li', null, '📝 ', h('b', null, '결산'), ' — 분기가 끝나면 돌아보고, 다음 분기 목표를 만다라트에 연결해요')),
       h('p', {class:'about-p', style:'margin-top:6px;color:var(--muted);font-size:13px'}, '자세한 사용법은 각 페이지 위에서 볼 수 있어요.')),
     sec('저장 안내',
-      h('p', {class:'about-p'}, '지금은 쓰는 기기(브라우저)에 자동 저장돼요. 기기를 바꾸거나 브라우저 기록을 지우기 전에는 ⚙️ 설정에서 백업해 주세요.')),
+      h('p', {class:'about-p', style:'white-space:pre-line'}, '로그인하지 않으면 쓰는 기기(브라우저)에 자동 저장돼요.\n⚙️ 설정에서 구글로 로그인하면 PC와 폰에서 같은 내용을 볼 수 있어요.')),
     h('button', {type:'button', class:'primary', style:'width:100%;margin-top:20px', onclick:closeSheet}, '시작하기')
   ];
 }
@@ -874,9 +1006,7 @@ function renderSettings(){
     h('div', {class:'fonts'}, fontBtns),
     FONTS[state.settings.font] && FONTS[state.settings.font].credit ? h('p', {class:'note', style:'font-size:12px;margin:8px 0 0'}, '폰트 출처: ' + FONTS[state.settings.font].credit) : null,
     h('div', {class:'label'}, '저장 · 동기화'),
-    h('p', {class:'note'}, Store.ok
-      ? '지금은 이 기기(브라우저)에 자동 저장돼요.\n구글 로그인으로 PC·폰 동기화하는 기능은 다음 단계에서 붙일 예정이에요.'
-      : '⚠️ 이 화면에서는 기기 저장이 막혀 있어서, 창을 닫으면 내용이 사라질 수 있어요.\n아래 백업을 꼭 해 주세요.'),
+    renderSyncBox(),
     h('div', {class:'label'}, '백업 내보내기'),
     h('div', {class:'btn-row'},
       h('button', {type:'button', class:'ghost', onclick:() => {
@@ -926,7 +1056,7 @@ document.addEventListener('keydown', e => { if (e.key === 'Escape'){ if ($('#dia
 
 function confirmDialog(msg, onYes){
   const d = $('#dialog'); d.innerHTML = '';
-  d.append(h('p', null, msg), h('div', {class:'btn-row'},
+  d.append(h('p', {style:'white-space:pre-line'}, msg), h('div', {class:'btn-row'},
     h('button', {type:'button', class:'ghost', onclick:() => $('#dialogBg').classList.remove('show')}, '취소'),
     h('button', {type:'button', class:'primary', onclick:() => { $('#dialogBg').classList.remove('show'); onYes(); }}, '확인')));
   $('#dialogBg').classList.add('show');
@@ -1099,6 +1229,7 @@ $('#aboutLink').addEventListener('click', e => { e.preventDefault(); openSheet({
 
 applyFont();
 render();
+Cloud.init();
 if (!pref.get(WELCOME_KEY)) openSheet({type:'about'});
 })();
 </script>
