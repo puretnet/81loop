@@ -57,11 +57,11 @@ header.top{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding-botto
 }
 
 /* mandalart toolbar */
-.mbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:16px}
+.mbar{display:flex;flex-direction:column;align-items:flex-start;gap:8px;margin-bottom:16px}
 .seg{display:inline-flex;background:var(--soft);border-radius:9px;padding:3px;gap:2px}
 .seg button{border:0;background:none;padding:6px 12px;border-radius:7px;color:var(--muted);font-size:14px}
 .seg button.on{background:var(--card);color:var(--ink);box-shadow:0 1px 2px rgba(0,0,0,.06)}
-.hint{font-size:13px;color:var(--muted)}
+.hint{font-size:13px;color:var(--muted);white-space:pre-line;line-height:1.6}
 
 /* cells */
 .cell{border:0;background:var(--card);border-radius:7px;padding:6px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;text-align:center;position:relative;overflow:hidden;min-width:0;aspect-ratio:1;transition:box-shadow .15s}
@@ -170,7 +170,8 @@ textarea.field{resize:vertical;line-height:1.5}
 .rv-sub{font-size:calc(18px*var(--fs));font-weight:600;width:auto;max-width:76vw}
 .rv-tags{font-size:calc(14px*var(--fs));color:var(--muted)}
 .section{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px;margin-bottom:14px}
-.section h3{margin:0;font-size:16px;display:flex;align-items:baseline;gap:10px}
+.section h3{margin:0;font-size:16px;display:flex;align-items:baseline;gap:4px 10px;flex-wrap:wrap}
+.section h3 .st{white-space:nowrap}
 .section h3 small{font-size:13px;font-weight:400;color:var(--muted)}
 .section .body{margin-top:14px}
 .cols{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
@@ -233,7 +234,7 @@ textarea.field{resize:vertical;line-height:1.5}
 .font-opt .fn{text-align:right}
 .font-opt .fn{font-size:12px;color:var(--muted);font-family:'Noto Sans KR',sans-serif}
 .btn-row{display:flex;gap:8px;flex-wrap:wrap}
-.note{font-size:13px;color:var(--muted);line-height:1.6}
+.note{font-size:13px;color:var(--muted);line-height:1.6;white-space:pre-line}
 
 /* intro + about */
 .intro{position:relative;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px 18px;margin-bottom:18px}
@@ -249,7 +250,7 @@ textarea.field{resize:vertical;line-height:1.5}
 .about-p{margin:0 0 8px;font-size:14px;line-height:1.75;color:var(--ink);word-break:keep-all}
 .about-ol{margin:0;padding-left:2px;list-style:none;font-size:14px;line-height:1.9}
 
-.intro-ol li,.about-ol li{padding-left:1.7em;text-indent:-1.7em}
+.intro-ol li,.about-ol li{padding-left:1.7em;text-indent:-1.7em;white-space:pre-line}
 /* footer */
 .credit{margin-top:48px;padding-top:16px;border-top:1px solid var(--line);display:flex;justify-content:center;gap:10px;flex-wrap:wrap;font-size:12.5px;color:var(--faint)}
 .credit a{color:var(--muted);text-decoration:none;border-bottom:1px solid var(--line2)}
@@ -666,7 +667,7 @@ function renderZoom(){
         grid.append(cellView(m.subs[s], 'sub', '핵심목표 '+(s+1), () => { ui.zoomSub = s; renderMain(); }, h('span', {class:'more'}, '›')));
       }
     }
-    crumbs = h('div', {class:'crumbs'}, h('span', null, cellName(m.core, '메인 목표')));
+    crumbs = null;
     hint = '핵심목표를 누르면 세부목표 9칸으로 들어가요 · 가운데는 눌러서 편집';
   } else {
     const s = ui.zoomSub, sub = m.subs[s];
@@ -694,12 +695,12 @@ const PAGE_INTRO = {
     title:'🎯 81 — 만다라트',
     desc:[ETYMOLOGY, '가운데 메인 목표 1개, 그걸 이루기 위한 핵심목표 8개, 핵심목표마다 세부목표 8개. 9×9 = 81칸에 한 해를 그려 나가요.'],
     steps:['🎯 가운데에 메인 목표를 적어요', '🌱 둘레 8칸에 핵심목표, 그 바깥에 세부목표를 채워요',
-           '✍️ 칸을 눌러 상세내용(방법·기준·횟수)을 쓸 수 있어요 · 9칸 보기에서는 가운데 칸을 눌러요']
+           '✍️ 칸을 눌러 상세내용(방법·기준·횟수)을 쓸 수 있어요\n9칸 보기에서는 가운데 칸을 눌러요']
   },
   review: {
     title:'📝 Loop — 분기 결산',
     desc:[LOOP_TEXT],
-    steps:['🏷️ 분기 탭에서 분기 이름과 테마를 정해요 (예시 그대로 쓰기도 돼요)', '🔍 Timeline, Reflect, Keyword를 채우며 이번 분기를 돌아봐요',
+    steps:['🏷️ 분기 탭에서 분기 이름과 테마를 정해요 (예시를 그대로 사용해도 괜찮아요)', '🔍 Timeline, Reflect, Keyword를 채우며 이번 분기를 돌아봐요',
            '🔗 Next Quarter에 다음 분기 목표를 적고 만다라트 목표와 연결해요', '🗓️ 연간 모아보기에서 한 해의 흐름을 한눈에 봐요']
   }
 };
@@ -725,11 +726,10 @@ function renderAbout(){
     sec('Loop — 분기 결산',
       h('p', {class:'about-p'}, LOOP_TEXT)),
     sec('이렇게 써 보세요',
-      h('ol', {class:'about-ol'},
-        h('li', null, '🎯 가운데에 메인 목표를 적어요'),
-        h('li', null, '🌱 둘레 8칸에 핵심목표, 그 바깥에 세부목표를 채워요'),
-        h('li', null, '✍️ 칸을 눌러 상세내용(방법·기준·횟수)을 쓸 수 있어요 · 9칸 보기에서는 가운데 칸을 눌러요'),
-        h('li', null, '🔁 분기가 끝나면 결산을 쓰고, 다음 분기 목표를 만다라트에 연결해요'))),
+      h('ul', {class:'about-ol'},
+        h('li', null, '🎯 ', h('b', null, '만다라트'), ' — 메인 목표 → 핵심목표 → 세부목표 순서로 81칸을 채워요'),
+        h('li', null, '📝 ', h('b', null, '결산'), ' — 분기가 끝나면 돌아보고, 다음 분기 목표를 만다라트에 연결해요')),
+      h('p', {class:'about-p', style:'margin-top:6px;color:var(--muted);font-size:13px'}, '자세한 사용법은 각 페이지 위에서 볼 수 있어요.')),
     sec('저장 안내',
       h('p', {class:'about-p'}, '지금은 쓰는 기기(브라우저)에 자동 저장돼요. 기기를 바꾸거나 브라우저 기록을 지우기 전에는 ⚙️ 설정에서 백업해 주세요.')),
     h('button', {type:'button', class:'primary', style:'width:100%;margin-top:20px', onclick:closeSheet}, '시작하기')
@@ -739,11 +739,11 @@ function renderMandalart(){
   const setView = v => { ui.view = v; Store.setView(v); renderMain(); };
   const bar = h('div', {class:'mbar'},
     h('div', {class:'seg'},
-      h('button', {type:'button', class:ui.view === 'full' ? 'on' : '', onclick:() => setView('full')}, '전체 81칸'),
-      h('button', {type:'button', class:ui.view === 'zoom' ? 'on' : '', onclick:() => setView('zoom')}, '9칸씩 보기')),
+      h('button', {type:'button', class:ui.view === 'full' ? 'on' : '', onclick:() => setView('full')}, '81칸'),
+      h('button', {type:'button', class:ui.view === 'zoom' ? 'on' : '', onclick:() => setView('zoom')}, '9칸')),
     h('span', {class:'hint'}, ui.view === 'full' ? '칸을 누르면 상세내용을 쓸 수 있어요'
-      : ui.zoomSub == null ? '핵심목표를 누르면 세부목표 9칸으로 들어가요 · 가운데 메인 목표는 눌러서 편집해요'
-      : '칸을 누르면 상세내용을 쓸 수 있어요 · ← 버튼으로 돌아가요'));
+      : ui.zoomSub == null ? '핵심목표를 누르면 세부목표 9칸으로 들어가요\n가운데 메인 목표는 눌러서 편집해요'
+      : '칸을 누르면 상세내용을 쓸 수 있어요\n← 버튼으로 돌아가요'));
   return h('div', null, renderIntro('mandalart'), bar, ui.view === 'full' ? renderFull() : renderZoom());
 }
 
@@ -832,7 +832,7 @@ function openYearPicker(){
       h('span', null, y + '년'), y === cur ? h('small', null, '올해') : null, yearHasData(String(y)) ? h('i', {class:'ydot', title:'내용 있음'}) : null));
   }
   d.append(h('div', {class:'ydlg-h'}, h('b', null, '📅 연도 선택'), h('button', {type:'button', class:'sh-close', 'aria-label':'닫기', onclick:() => $('#dialogBg').classList.remove('show')}, '✕')),
-    h('p', {class:'note', style:'margin:0 0 12px;font-size:13px'}, '연도마다 만다라트와 결산이 따로 저장돼요 · 점(●)은 내용이 있는 연도예요'),
+    h('p', {class:'note', style:'margin:0 0 12px;font-size:13px'}, '연도마다 만다라트와 결산이 따로 저장돼요.\n점(●)은 내용이 있는 연도예요.'),
     list);
   $('#dialogBg').classList.add('show');
 }
@@ -858,12 +858,12 @@ function renderSettings(){
   const years = Object.keys(state.years).filter(hasData).sort();
   const resetBtns = years.length ? years.map(y => h('button', {type:'button', class:'ghost', onclick:() => confirmDialog(y + '년 만다라트와 결산을 모두 지울까요? 되돌릴 수 없어요.', () => {
       delete state.years[y]; save(); render(); openSheet({type:'settings'}); toast(y + '년 내용을 지웠어요');
-    })}, y + '년 지우기')) : [h('span', {class:'note'}, '아직 지울 내용이 없어요')];
+    })}, y + '년 지우기')) : [h('span', {class:'note'}, '아직 지울 내용이 없어요.')];
   if (years.length > 1) resetBtns.push(h('button', {type:'button', class:'ghost', onclick:() => confirmDialog('모든 연도의 내용을 지울까요? 되돌릴 수 없어요.', () => {
       state.years = {}; save(); render(); openSheet({type:'settings'}); toast('모든 내용을 지웠어요');
     })}, '전체 지우기'));
   return [
-    h('div', {class:'sh-head'}, h('span', {class:'sh-kind'}, '설정'), h('button', {class:'sh-close', type:'button', 'aria-label':'닫기', onclick:closeSheet}, '✕')),
+    h('div', {class:'sh-head'}, h('button', {class:'sh-close', type:'button', 'aria-label':'닫기', onclick:closeSheet}, '✕')),
     h('div', {class:'label'}, '테마'),
     h('div', {class:'seg'}, [['paper','📄 종이'], ['glass','🫧 리퀴드 글래스']].map(([k, label]) => h('button', {type:'button', class:(state.settings.theme || 'paper') === k ? 'on' : '',
       onclick:() => { state.settings.theme = k; applyFont(); save(); renderMain(); openSheet({type:'settings'}); }}, label))),
@@ -875,8 +875,8 @@ function renderSettings(){
     FONTS[state.settings.font] && FONTS[state.settings.font].credit ? h('p', {class:'note', style:'font-size:12px;margin:8px 0 0'}, '폰트 출처: ' + FONTS[state.settings.font].credit) : null,
     h('div', {class:'label'}, '저장 · 동기화'),
     h('p', {class:'note'}, Store.ok
-      ? '지금은 이 기기(브라우저)에 자동 저장돼요. 구글 로그인으로 PC·폰 동기화하는 기능은 다음 단계에서 붙일 예정이에요.'
-      : '⚠️ 이 화면에서는 기기 저장이 막혀 있어서, 창을 닫으면 내용이 사라질 수 있어요. 아래 백업을 꼭 해 주세요.'),
+      ? '지금은 이 기기(브라우저)에 자동 저장돼요.\n구글 로그인으로 PC·폰 동기화하는 기능은 다음 단계에서 붙일 예정이에요.'
+      : '⚠️ 이 화면에서는 기기 저장이 막혀 있어서, 창을 닫으면 내용이 사라질 수 있어요.\n아래 백업을 꼭 해 주세요.'),
     h('div', {class:'label'}, '백업 내보내기'),
     h('div', {class:'btn-row'},
       h('button', {type:'button', class:'ghost', onclick:() => {
@@ -956,7 +956,7 @@ function renderQuarter(q){
   const months = [1,2,3].map(k => (qi*3 + k) + '월');
   const exBtn = h('button', {type:'button', class:'ghost', style:'margin-top:10px', onclick:() => {
     Object.assign(r, {title:ex.title, subtitle:ex.subtitle, tags:ex.tags}); save(); renderMain();
-  }}, '✨ 예시 그대로 쓰기 (' + ex.title + ')');
+  }}, '✨ 예시 그대로 사용');
   const syncExBtn = () => { exBtn.style.display = (!r.title && !r.subtitle && !r.tags) ? '' : 'none'; };
   syncExBtn();
   const bind = key => e => { r[key] = e.target.value; save(); if (key === 'title' || key === 'subtitle' || key === 'tags') syncExBtn(); };
@@ -980,7 +980,7 @@ function renderQuarter(q){
   };
   drawNext();
 
-  const section = (title, sub, body) => h('section', {class:'section'}, h('h3', null, title, h('small', null, sub)), h('div', {class:'body'}, body));
+  const section = (title, sub, body) => h('section', {class:'section'}, h('h3', null, h('span', {class:'st'}, title), h('small', null, sub)), h('div', {class:'body'}, body));
   const reflect = [['💛','감사했던 일','thanks'], ['😊','좋았던 일','good'], ['🌧️','아쉬웠던 일','regret']];
 
   return h('div', null,
@@ -1003,7 +1003,7 @@ function renderQuarter(q){
         h('div', {class:'kw'},
           h('input', {class:'field emoji-in', placeholder:'☁️', value:r.keywordEmoji, maxlength:'16', oninput:bind('keywordEmoji')}),
           h('input', {class:'field kw-in', placeholder:'한 단어', value:r.keyword, oninput:bind('keyword')}))),
-      section('4. Next Quarter', '다음 분기에 이루고 싶고 기대되는 것 · 만다라트 목표와 연결할 수 있어요', nextList))
+      section('4. Next Quarter', '다음 분기에 이루고 싶고 기대되는 것', [h('p', {class:'hint', style:'margin:0 0 10px'}, '🔗 만다라트 목표와 연결할 수 있어요'), nextList]))
   );
 }
 function quarterFilled(r){
