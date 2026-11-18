@@ -257,6 +257,14 @@ textarea.field{resize:vertical;line-height:1.5}
 .credit .sep{color:var(--line2)}
 @media (max-width:420px){.credit .sep{display:none}.credit{flex-direction:column;align-items:center;gap:4px}}
 
+/* centered popup (about) */
+.sheet.modal{top:50%;left:50%;right:auto;bottom:auto;height:auto;width:min(440px,calc(100vw - 40px));max-height:74vh;
+  border:1px solid var(--line);border-radius:22px;box-shadow:0 20px 60px rgba(40,30,20,.18);
+  padding:22px 22px 24px;transform:translate(-50%,-46%) scale(.97);opacity:0;
+  transition:transform .22s ease,opacity .22s ease,visibility 0s .22s}
+.sheet.modal.open{transform:translate(-50%,-50%);opacity:1;transition:transform .22s ease,opacity .22s ease}
+.sheet.modal::before{display:none}
+
 /* ===== liquid glass theme ===== */
 html[data-theme="glass"]{
   --paper:#f4f1ec; --card:rgba(255,255,255,.52); --line:rgba(255,255,255,.65); --line2:rgba(120,110,100,.22);
@@ -298,6 +306,7 @@ html[data-theme="glass"] .qtab.on,html[data-theme="glass"] .yopt.on{background:r
 html[data-theme="glass"] .acard.empty{background:rgba(255,255,255,.18);border:1px dashed rgba(255,255,255,.8)}
 html[data-theme="glass"] .sheet{background:rgba(255,255,255,.62);border-radius:28px 0 0 28px}
 @media (max-width:700px){html[data-theme="glass"] .sheet{border-radius:28px 28px 0 0}}
+html[data-theme="glass"] .sheet.modal{border-radius:26px}
 html[data-theme="glass"] .dialog{border-radius:26px;background:rgba(255,255,255,.7)}
 html[data-theme="glass"] .backdrop.show,html[data-theme="glass"] .dialog-bg{background:rgba(60,50,40,.12)}
 html[data-theme="glass"] .tb,html[data-theme="glass"] .tb-pop{border-bottom-color:rgba(255,255,255,.6)}
@@ -901,6 +910,7 @@ function openSheet(s){
   ui.sheet = s;
   const sheet = $('#sheet');
   sheet.innerHTML = '';
+  sheet.classList.toggle('modal', s.type === 'about');
   sheet.append(...[].concat(s.type === 'edit' ? renderEditor(s.target) : s.type === 'about' ? renderAbout() : renderSettings()).flat().filter(Boolean));
   sheet.classList.add('open'); sheet.setAttribute('aria-hidden', 'false');
   $('#backdrop').classList.add('show');
