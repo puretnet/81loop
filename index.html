@@ -179,7 +179,7 @@ textarea.field{resize:vertical;line-height:1.5}
 .two{display:grid;grid-template-columns:1fr 1.7fr;gap:14px}
 .two .section{margin-bottom:0}
 .kw{display:flex;gap:8px;align-items:center}
-.kw .emoji-in{width:58px;text-align:center;font-size:22px}
+.kw .kw-emoji{width:52px;height:52px;cursor:pointer;color:var(--muted)}
 .kw .kw-in{font-size:calc(20px*var(--fs));font-weight:700}
 .next-row{display:flex;gap:6px;align-items:center;margin-bottom:8px;flex-wrap:wrap}
 .next-row .field{flex:1 1 200px}
@@ -262,6 +262,14 @@ textarea.field{resize:vertical;line-height:1.5}
 .gbtn{display:inline-flex;align-items:center;gap:10px;border:1px solid var(--line2);background:#fff;border-radius:999px;padding:10px 18px;font-size:14px;font-weight:600;color:#3c4043;margin-top:6px}
 .gmark{width:22px;height:22px;border-radius:50%;display:grid;place-items:center;font-weight:800;font-size:14px;color:#fff;background:conic-gradient(#ea4335 0 25%,#fbbc05 0 50%,#34a853 0 75%,#4285f4 0)}
 .btn-col{display:flex;flex-direction:column;gap:8px}
+
+/* phone: inputs at 16px or more so iPhone doesn't zoom in */
+@media (max-width:760px){
+  .field,select.field,.next-row select.field,.rich,.compact .rich,.rv-tags,.bare{font-size:max(16px, calc(15px*var(--fs)))!important}
+  .rv-title{font-size:calc(26px*var(--fs))!important}
+  .rv-sub{font-size:max(17px, calc(18px*var(--fs)))!important}
+  .kw .kw-in{font-size:calc(20px*var(--fs))!important}
+}
 
 /* centered popup (about) */
 .sheet.modal{top:50%;left:50%;right:auto;bottom:auto;height:auto;width:min(440px,calc(100vw - 40px));max-height:74vh;
@@ -401,7 +409,7 @@ const FONTS = {
   ssair:   {label:'카페24 써라운드에어', desc:'둥글고 가벼운 느낌', family:"'Cafe24SsurroundAir', " + SYS, credit:'카페24 써라운드에어 © 카페24(주)', fs:1},
   heejoy:  {label:'히조이', desc:'부드럽고 다정한 손글씨', family:"'Heejoy', " + SYS, credit:'히조이 © Heejung Kim (SIL OFL)', fs:1.05}
 };
-const SIZES = {s:{label:'작게', k:0.9}, m:{label:'보통', k:1}, l:{label:'크게', k:1.12}, xl:{label:'아주 크게', k:1.25}};
+const SIZES = {m:{label:'보통', k:1}, l:{label:'크게', k:1.12}, xl:{label:'아주 크게', k:1.25}};
 const loadedFonts = new Set();
 function loadFont(key, previewText){
   const f = FONTS[key]; if (!f || !f.g) return;
@@ -643,6 +651,19 @@ function renderSyncBox(){
     h('div', {class:'btn-row'},
       h('button', {type:'button', class:'ghost', onclick:() => Cloud.pull().then(() => toast('최신 내용을 확인했어요'))}, '🔄 지금 동기화'),
       h('button', {type:'button', class:'ghost', onclick:() => confirmDialog('로그아웃할까요?\n이 기기의 내용은 그대로 남아 있어요.', () => Cloud.logout())}, '로그아웃'))];
+}
+function openEmojiPicker(current, onPick){
+  const d = $('#dialog'); d.innerHTML = '';
+  const close = () => $('#dialogBg').classList.remove('show');
+  const pick = v => { onPick(v); close(); };
+  const input = h('input', {class:'field', placeholder:'직접 입력', value:current || '', maxlength:'16', style:'flex:1'});
+  d.append(
+    h('div', {class:'ydlg-h'}, h('b', null, '이모지 고르기'), h('button', {type:'button', class:'sh-close', 'aria-label':'닫기', onclick:close}, '✕')),
+    h('div', {class:'picks', style:'margin:4px 0 12px'}, EMOJIS.map(e => h('button', {type:'button', onclick:() => pick(e)}, e))),
+    h('div', {class:'emoji-row'}, input,
+      h('button', {type:'button', class:'primary', onclick:() => pick(input.value.trim())}, '넣기'),
+      current ? h('button', {type:'button', class:'ghost', onclick:() => pick('')}, '지우기') : null));
+  $('#dialogBg').classList.add('show');
 }
 function choiceDialog(msg, choices){
   const d = $('#dialog'); d.innerHTML = '';
@@ -1084,10 +1105,15 @@ function renderQuarter(q){
   const ex = Q_EXAMPLES[q];
   const r = Y().reviews[q], qi = QS.indexOf(q);
   const months = [1,2,3].map(k => (qi*3 + k) + '월');
+  const EX_KEYS = ['title', 'subtitle', 'tags'];
   const exBtn = h('button', {type:'button', class:'ghost', style:'margin-top:10px', onclick:() => {
-    Object.assign(r, {title:ex.title, subtitle:ex.subtitle, tags:ex.tags}); save(); renderMain();
-  }}, '✨ 예시 그대로 사용');
-  const syncExBtn = () => { exBtn.style.display = (!r.title && !r.subtitle && !r.tags) ? '' : 'none'; };
+    EX_KEYS.forEach(k => { if (!r[k].trim()) r[k] = ex[k]; }); save(); renderMain();
+  }});
+  const syncExBtn = () => {
+    const empty = EX_KEYS.filter(k => !r[k].trim()).length;
+    exBtn.style.display = empty ? '' : 'none';
+    exBtn.textContent = empty === EX_KEYS.length ? '✨ 예시 그대로 사용' : '✨ 빈칸 예시로 채우기';
+  };
   syncExBtn();
   const bind = key => e => { r[key] = e.target.value; save(); if (key === 'title' || key === 'subtitle' || key === 'tags') syncExBtn(); };
 
@@ -1131,7 +1157,8 @@ function renderQuarter(q){
     h('div', {class:'two'},
       section('3. Keyword', '이번 분기를 표현하는 한 단어',
         h('div', {class:'kw'},
-          h('input', {class:'field emoji-in', placeholder:'☁️', value:r.keywordEmoji, maxlength:'16', oninput:bind('keywordEmoji')}),
+          (() => { const b = h('button', {type:'button', class:'emoji-big kw-emoji', 'aria-label':'키워드 이모지 고르기',
+            onclick:() => openEmojiPicker(r.keywordEmoji, v => { r.keywordEmoji = v; b.textContent = v || '＋'; save(); })}, r.keywordEmoji || '＋'); return b; })(),
           h('input', {class:'field kw-in', placeholder:'한 단어', value:r.keyword, oninput:bind('keyword')}))),
       section('4. Next Quarter', '다음 분기에 이루고 싶고 기대되는 것', [h('p', {class:'hint', style:'margin:0 0 10px'}, '🔗 만다라트 목표와 연결할 수 있어요'), nextList]))
   );
